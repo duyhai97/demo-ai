@@ -9,7 +9,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -20,12 +19,17 @@ public class TtsService {
     private static final long MIN_AUDIO_SIZE = 2048;
     private static final int MAX_RETRY_PER_VOICE = 3;
 
+    private static final String EDGE_TTS_DOCKER_PATH = "/opt/venv/bin/edge-tts";
+    private static final String EDGE_TTS_LOCAL_MAC_PATH = "/Users/local/Library/Python/3.9/bin/edge-tts";
+
     private static final List<String> VOICES = List.of(
             "vi-VN-HoaiMyNeural",
             "vi-VN-NamMinhNeural"
     );
 
     public String generate(String text) throws Exception {
+
+        System.out.println("TTS SERVICE VERSION = ABSOLUTE_EDGE_TTS_001");
 
         Files.createDirectories(Paths.get("storage/audio"));
         Files.createDirectories(Paths.get("storage/tmp"));
@@ -41,14 +45,11 @@ public class TtsService {
         Exception lastError = null;
 
         for (String voice : VOICES) {
-
             for (int attempt = 1; attempt <= MAX_RETRY_PER_VOICE; attempt++) {
-
                 try {
                     System.out.println("TTS VOICE = " + voice + ", ATTEMPT = " + attempt);
 
                     String output = generateOnce(cleanText, voice);
-
                     Path audioPath = Paths.get(output);
 
                     if (isValidAudio(audioPath)) {
@@ -57,7 +58,6 @@ public class TtsService {
                     }
 
                     deleteIfExists(audioPath);
-
                     throw new RuntimeException("Voice file invalid after generate");
 
                 } catch (Exception e) {
@@ -76,36 +76,23 @@ public class TtsService {
 
     private String generateOnce(String text, String voice) throws Exception {
 
-        String output =
-                "storage/audio/"
-                        + UUID.randomUUID()
-                        + ".mp3";
+        String output = "storage/audio/" + UUID.randomUUID() + ".mp3";
 
-        Path txtFile =
-                Paths.get(
-                        "storage/tmp/"
-                                + UUID.randomUUID()
-                                + ".txt"
-                );
+        Path txtFile = Paths.get("storage/tmp/" + UUID.randomUUID() + ".txt");
 
-        Files.writeString(
-                txtFile,
-                text,
-                StandardCharsets.UTF_8
-        );
+        Files.writeString(txtFile, text, StandardCharsets.UTF_8);
 
         String edgeTts = resolveEdgeTtsCommand();
 
-        ProcessBuilder pb =
-                new ProcessBuilder(
-                        edgeTts,
-                        "--voice",
-                        voice,
-                        "--text",
-                        text,
-                        "--write-media",
-                        output
-                );
+        System.out.println("EDGE TTS RESOLVED PATH = " + edgeTts);
+        System.out.println("EDGE TTS FILE EXISTS = " + new File(edgeTts).exists());
+
+        ProcessBuilder pb = new ProcessBuilder(
+                edgeTts,
+                "--voice", voice,
+                "--text", text,
+                "--write-media", output
+        );
 
         pb.redirectErrorStream(true);
 
@@ -113,17 +100,10 @@ public class TtsService {
 
         Process process = pb.start();
 
-        try (
-                BufferedReader br =
-                        new BufferedReader(
-                                new InputStreamReader(
-                                        process.getInputStream(),
-                                        StandardCharsets.UTF_8
-                                )
-                        )
-        ) {
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)
+        )) {
             String line;
-
             while ((line = br.readLine()) != null) {
                 System.out.println("[EDGE] " + line);
             }
@@ -143,15 +123,13 @@ public class TtsService {
 
         Path audioPath = Paths.get(output);
 
-        long size = Files.exists(audioPath)
-                ? Files.size(audioPath)
-                : 0;
+        long size = Files.exists(audioPath) ? Files.size(audioPath) : 0;
 
         System.out.println("VOICE SIZE = " + size);
 
-        if (code != 0 && !isValidAudio(audioPath)) {
+        if (code != 0 || !isValidAudio(audioPath)) {
             deleteIfExists(audioPath);
-            throw new RuntimeException("Edge TTS failed, exitCode=" + code);
+            throw new RuntimeException("Edge TTS failed, exitCode=" + code + ", size=" + size);
         }
 
         deleteIfExists(txtFile);
@@ -198,14 +176,19 @@ public class TtsService {
     }
 
     private String resolveEdgeTtsCommand() {
-        if (System.getProperty("os.name").toLowerCase().contains("mac")) {
-            File macPath = new File("/Users/local/Library/Python/3.9/bin/edge-tts");
+
+        String osName = System.getProperty("os.name").toLowerCase();
+
+        if (osName.contains("mac")) {
+            File macPath = new File(EDGE_TTS_LOCAL_MAC_PATH);
 
             if (macPath.exists()) {
                 return macPath.getAbsolutePath();
             }
+
+            return "edge-tts";
         }
 
-        return "/opt/venv/bin/edge-tts";
+        return EDGE_TTS_DOCKER_PATH;
     }
 }
