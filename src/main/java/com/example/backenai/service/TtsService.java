@@ -3,31 +3,83 @@ package com.example.backenai.service;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class TtsService {
+
+    private static final long MIN_AUDIO_SIZE = 2048;
+    private static final int MAX_RETRY_PER_VOICE = 3;
+
+    private static final List<String> VOICES = List.of(
+            "vi-VN-HoaiMyNeural",
+            "vi-VN-NamMinhNeural"
+    );
 
     public String generate(String text) throws Exception {
 
         Files.createDirectories(Paths.get("storage/audio"));
         Files.createDirectories(Paths.get("storage/tmp"));
 
+        String cleanText = normalizeText(text);
+
+        if (cleanText.isBlank()) {
+            throw new RuntimeException("TTS text is empty");
+        }
+
+        System.out.println("TEXT = " + cleanText);
+
+        Exception lastError = null;
+
+        for (String voice : VOICES) {
+
+            for (int attempt = 1; attempt <= MAX_RETRY_PER_VOICE; attempt++) {
+
+                try {
+                    System.out.println("TTS VOICE = " + voice + ", ATTEMPT = " + attempt);
+
+                    String output = generateOnce(cleanText, voice);
+
+                    Path audioPath = Paths.get(output);
+
+                    if (isValidAudio(audioPath)) {
+                        System.out.println("VOICE OK = " + output);
+                        return output;
+                    }
+
+                    deleteIfExists(audioPath);
+
+                    throw new RuntimeException("Voice file invalid after generate");
+
+                } catch (Exception e) {
+                    lastError = e;
+
+                    System.out.println("TTS FAILED voice=" + voice + ", attempt=" + attempt);
+                    e.printStackTrace();
+
+                    Thread.sleep(800L * attempt);
+                }
+            }
+        }
+
+        throw new RuntimeException("Voice file invalid", lastError);
+    }
+
+    private String generateOnce(String text, String voice) throws Exception {
+
         String output =
                 "storage/audio/"
                         + UUID.randomUUID()
                         + ".mp3";
-
-        text = text
-                .replace("\r", " ")
-                .replace("\n", " ")
-                .replaceAll("\\s+", " ")
-                .trim();
 
         Path txtFile =
                 Paths.get(
@@ -42,27 +94,15 @@ public class TtsService {
                 StandardCharsets.UTF_8
         );
 
-        String edgeTts;
-
-        if (System.getProperty("os.name")
-                .toLowerCase()
-                .contains("mac")) {
-
-            edgeTts =
-                    "/Users/local/Library/Python/3.9/bin/edge-tts";
-
-        } else {
-
-            edgeTts = "edge-tts";
-        }
+        String edgeTts = resolveEdgeTtsCommand();
 
         ProcessBuilder pb =
                 new ProcessBuilder(
                         edgeTts,
                         "--voice",
-                        "vi-VN-HoaiMyNeural",
-                        "--file",
-                        txtFile.toString(),
+                        voice,
+                        "--text",
+                        text,
                         "--write-media",
                         output
                 );
@@ -70,7 +110,6 @@ public class TtsService {
         pb.redirectErrorStream(true);
 
         System.out.println("EDGE CMD = " + pb.command());
-        System.out.println("TEXT = " + text);
 
         Process process = pb.start();
 
@@ -78,39 +117,106 @@ public class TtsService {
                 BufferedReader br =
                         new BufferedReader(
                                 new InputStreamReader(
-                                        process.getInputStream()
+                                        process.getInputStream(),
+                                        StandardCharsets.UTF_8
                                 )
                         )
         ) {
-
             String line;
 
             while ((line = br.readLine()) != null) {
-
                 System.out.println("[EDGE] " + line);
             }
         }
 
-        int code = process.waitFor();
+        boolean finished = process.waitFor(60, TimeUnit.SECONDS);
+
+        if (!finished) {
+            process.destroyForcibly();
+            deleteIfExists(Paths.get(output));
+            throw new RuntimeException("Edge TTS timeout");
+        }
+
+        int code = process.exitValue();
 
         System.out.println("EDGE EXIT = " + code);
 
-        Path path = Paths.get(output);
-        boolean exists =
-                Files.exists(path);
-        long size = exists
-                ? Files.size(Paths.get(output))
+        Path audioPath = Paths.get(output);
+
+        long size = Files.exists(audioPath)
+                ? Files.size(audioPath)
                 : 0;
+
         System.out.println("VOICE SIZE = " + size);
 
-        if (!exists || size < 2048) {
-            throw new RuntimeException("Voice file invalid");
+        if (code != 0 && !isValidAudio(audioPath)) {
+            deleteIfExists(audioPath);
+            throw new RuntimeException("Edge TTS failed, exitCode=" + code);
         }
 
-        if (code != 0) {
-            System.out.println("Edge TTS warning: exit code != 0 but audio file exists, continue.");
-        }
+        deleteIfExists(txtFile);
 
         return output;
+    }
+
+    private String resolveEdgeTtsCommand() {
+
+        String configured = System.getenv("EDGE_TTS_PATH");
+
+        if (configured != null && !configured.isBlank()) {
+            return configured;
+        }
+
+        if (System.getProperty("os.name")
+                .toLowerCase()
+                .contains("mac")) {
+
+            File macPath =
+                    new File("/Users/local/Library/Python/3.9/bin/edge-tts");
+
+            if (macPath.exists()) {
+                return macPath.getAbsolutePath();
+            }
+        }
+
+        return "edge-tts";
+    }
+
+    private String normalizeText(String text) {
+
+        if (text == null) {
+            return "";
+        }
+
+        return text
+                .replace("\r", " ")
+                .replace("\n", " ")
+                .replace("“", "\"")
+                .replace("”", "\"")
+                .replace("‘", "'")
+                .replace("’", "'")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private boolean isValidAudio(Path path) throws Exception {
+
+        if (!Files.exists(path)) {
+            return false;
+        }
+
+        long size = Files.size(path);
+
+        System.out.println("CHECK AUDIO SIZE = " + size);
+
+        return size >= MIN_AUDIO_SIZE;
+    }
+
+    private void deleteIfExists(Path path) {
+
+        try {
+            Files.deleteIfExists(path);
+        } catch (Exception ignored) {
+        }
     }
 }

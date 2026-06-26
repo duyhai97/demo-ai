@@ -11,7 +11,8 @@ import java.util.Map;
 @Service
 public class OpenRouterService {
 
-    private String apiKey = "abcd";
+    @Value("${openrouter.api-key}")
+    private String apiKey;
 
     private final RestClient client = RestClient.builder()
             .baseUrl("https://openrouter.ai/api/v1")
