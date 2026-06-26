@@ -5,7 +5,11 @@ RUN apt-get update && apt-get install -y \
     chromium \
     python3 \
     python3-pip \
-    && pip3 install --break-system-packages edge-tts \
+    python3-venv \
+    && python3 -m venv /opt/venv \
+    && /opt/venv/bin/pip install --upgrade pip \
+    && /opt/venv/bin/pip install edge-tts \
+    && ln -s /opt/venv/bin/edge-tts /usr/local/bin/edge-tts \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

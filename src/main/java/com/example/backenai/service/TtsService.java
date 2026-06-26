@@ -159,29 +159,6 @@ public class TtsService {
         return output;
     }
 
-    private String resolveEdgeTtsCommand() {
-
-        String configured = System.getenv("EDGE_TTS_PATH");
-
-        if (configured != null && !configured.isBlank()) {
-            return configured;
-        }
-
-        if (System.getProperty("os.name")
-                .toLowerCase()
-                .contains("mac")) {
-
-            File macPath =
-                    new File("/Users/local/Library/Python/3.9/bin/edge-tts");
-
-            if (macPath.exists()) {
-                return macPath.getAbsolutePath();
-            }
-        }
-
-        return "edge-tts";
-    }
-
     private String normalizeText(String text) {
 
         if (text == null) {
@@ -218,5 +195,23 @@ public class TtsService {
             Files.deleteIfExists(path);
         } catch (Exception ignored) {
         }
+    }
+
+    private String resolveEdgeTtsCommand() {
+        String configured = System.getenv("EDGE_TTS_PATH");
+
+        if (configured != null && !configured.isBlank()) {
+            return configured;
+        }
+
+        if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+            File macPath = new File("/Users/local/Library/Python/3.9/bin/edge-tts");
+
+            if (macPath.exists()) {
+                return macPath.getAbsolutePath();
+            }
+        }
+
+        return "/usr/local/bin/edge-tts";
     }
 }
