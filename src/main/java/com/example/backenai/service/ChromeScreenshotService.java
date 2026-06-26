@@ -14,6 +14,8 @@ import java.util.UUID;
 @Service
 public class ChromeScreenshotService {
 
+    private static final String CHROME_DOCKER_PATH = "/usr/bin/chromium";
+
     public String screenshot(String htmlPath) throws Exception {
 
         Files.createDirectories(Path.of("storage/frames"));
@@ -33,13 +35,14 @@ public class ChromeScreenshotService {
                 "--no-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
+                "--disable-software-rasterizer",
                 "--hide-scrollbars",
                 "--window-size=1080,1920",
                 "--screenshot=" + Path.of(output).toAbsolutePath(),
                 htmlUrl
         );
 
-        System.out.println("CHROME SERVICE VERSION = CHROMIUM_DOCKER_001");
+        System.out.println("CHROME SERVICE VERSION = CHROMIUM_DOCKER_002");
         System.out.println("CHROME BIN = " + chrome);
         System.out.println("CHROME EXISTS = " + new File(chrome).exists());
         System.out.println("CHROME CMD = " + cmd);
@@ -83,8 +86,12 @@ public class ChromeScreenshotService {
 
         String envChrome = System.getenv("CHROME_BIN");
 
-        if (envChrome != null && !envChrome.isBlank() && new File(envChrome).exists()) {
-            return envChrome;
+        if (envChrome != null && !envChrome.isBlank()) {
+            File envChromeFile = new File(envChrome);
+
+            if (envChromeFile.exists()) {
+                return envChromeFile.getAbsolutePath();
+            }
         }
 
         String os = System.getProperty("os.name").toLowerCase();
@@ -105,6 +112,7 @@ public class ChromeScreenshotService {
         }
 
         if (os.contains("win")) {
+
             String chrome1 = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 
             if (new File(chrome1).exists()) {
@@ -118,18 +126,6 @@ public class ChromeScreenshotService {
             }
         }
 
-        String linuxChromium = "/usr/bin/chromium";
-
-        if (new File(linuxChromium).exists()) {
-            return linuxChromium;
-        }
-
-        String linuxChromiumBrowser = "/usr/bin/chromium-browser";
-
-        if (new File(linuxChromiumBrowser).exists()) {
-            return linuxChromiumBrowser;
-        }
-
-        return "/usr/bin/chromium";
+        return CHROME_DOCKER_PATH;
     }
 }
