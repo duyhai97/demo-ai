@@ -29,7 +29,7 @@ public class TtsService {
 
     public String generate(String text) throws Exception {
 
-        System.out.println("TTS SERVICE VERSION = ABSOLUTE_EDGE_TTS_001");
+        System.out.println("TTS SERVICE VERSION = ABSOLUTE_EDGE_TTS_002");
 
         Files.createDirectories(Paths.get("storage/audio"));
         Files.createDirectories(Paths.get("storage/tmp"));
@@ -77,7 +77,6 @@ public class TtsService {
     private String generateOnce(String text, String voice) throws Exception {
 
         String output = "storage/audio/" + UUID.randomUUID() + ".mp3";
-
         Path txtFile = Paths.get("storage/tmp/" + UUID.randomUUID() + ".txt");
 
         Files.writeString(txtFile, text, StandardCharsets.UTF_8);
@@ -122,7 +121,6 @@ public class TtsService {
         System.out.println("EDGE EXIT = " + code);
 
         Path audioPath = Paths.get(output);
-
         long size = Files.exists(audioPath) ? Files.size(audioPath) : 0;
 
         System.out.println("VOICE SIZE = " + size);
@@ -143,7 +141,7 @@ public class TtsService {
             return "";
         }
 
-        return text
+        String result = text
                 .replace("\r", " ")
                 .replace("\n", " ")
                 .replace("“", "\"")
@@ -152,6 +150,40 @@ public class TtsService {
                 .replace("’", "'")
                 .replaceAll("\\s+", " ")
                 .trim();
+
+        result = removeRepeatedWords(result);
+
+        if (result.length() > 700) {
+            result = result.substring(0, 700);
+        }
+
+        return result;
+    }
+
+    private String removeRepeatedWords(String text) {
+
+        String[] words = text.split("\\s+");
+        StringBuilder sb = new StringBuilder();
+
+        String lastWord = "";
+        int repeatCount = 0;
+
+        for (String word : words) {
+            String clean = word.toLowerCase();
+
+            if (clean.equals(lastWord)) {
+                repeatCount++;
+            } else {
+                repeatCount = 1;
+                lastWord = clean;
+            }
+
+            if (repeatCount <= 3) {
+                sb.append(word).append(" ");
+            }
+        }
+
+        return sb.toString().trim();
     }
 
     private boolean isValidAudio(Path path) throws Exception {
@@ -185,8 +217,6 @@ public class TtsService {
             if (macPath.exists()) {
                 return macPath.getAbsolutePath();
             }
-
-            return "edge-tts";
         }
 
         return EDGE_TTS_DOCKER_PATH;
