@@ -1,3 +1,13 @@
+FROM eclipse-temurin:21-jdk AS build
+
+WORKDIR /app
+
+COPY . .
+
+RUN chmod +x mvnw
+RUN ./mvnw clean package -DskipTests
+
+
 FROM eclipse-temurin:21-jdk
 
 RUN apt-get update && apt-get install -y \
@@ -19,7 +29,7 @@ ENV CHROME_BIN=/usr/bin/chromium
 
 WORKDIR /app
 
-COPY target/*.jar app.jar
+COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
 
