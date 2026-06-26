@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -17,22 +18,20 @@ public class ChromeScreenshotService {
 
         Files.createDirectories(Path.of("storage/frames"));
 
-        String output =
-                "storage/frames/frame_"
-                        + UUID.randomUUID()
-                        + ".png";
+        String output = "storage/frames/frame_" + UUID.randomUUID() + ".png";
 
         String chrome = findChrome();
 
-        String htmlUrl =
-                Path.of(htmlPath)
-                        .toAbsolutePath()
-                        .toUri()
-                        .toString();
+        String htmlUrl = Path.of(htmlPath)
+                .toAbsolutePath()
+                .toUri()
+                .toString();
 
         List<String> cmd = List.of(
                 chrome,
                 "--headless=new",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
                 "--disable-gpu",
                 "--hide-scrollbars",
                 "--window-size=1080,1920",
@@ -40,6 +39,9 @@ public class ChromeScreenshotService {
                 htmlUrl
         );
 
+        System.out.println("CHROME SERVICE VERSION = CHROMIUM_DOCKER_001");
+        System.out.println("CHROME BIN = " + chrome);
+        System.out.println("CHROME EXISTS = " + new File(chrome).exists());
         System.out.println("CHROME CMD = " + cmd);
 
         ProcessBuilder pb = new ProcessBuilder(cmd);
@@ -48,7 +50,7 @@ public class ChromeScreenshotService {
         Process process = pb.start();
 
         try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(process.getInputStream())
+                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)
         )) {
             String line;
             while ((line = br.readLine()) != null) {
@@ -61,11 +63,17 @@ public class ChromeScreenshotService {
         System.out.println("CHROME EXIT = " + exit);
 
         if (exit != 0) {
-            throw new RuntimeException("Chrome screenshot failed");
+            throw new RuntimeException("Chrome screenshot failed, exitCode=" + exit);
         }
 
-        if (!new File(output).exists()) {
+        File screenshot = new File(output);
+
+        if (!screenshot.exists()) {
             throw new RuntimeException("Screenshot not generated");
+        }
+
+        if (screenshot.length() < 1024) {
+            throw new RuntimeException("Screenshot file invalid, size=" + screenshot.length());
         }
 
         return output;
@@ -73,20 +81,23 @@ public class ChromeScreenshotService {
 
     private String findChrome() {
 
-        String os =
-                System.getProperty("os.name").toLowerCase();
+        String envChrome = System.getenv("CHROME_BIN");
+
+        if (envChrome != null && !envChrome.isBlank() && new File(envChrome).exists()) {
+            return envChrome;
+        }
+
+        String os = System.getProperty("os.name").toLowerCase();
 
         if (os.contains("mac")) {
 
-            String chrome =
-                    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+            String chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
             if (new File(chrome).exists()) {
                 return chrome;
             }
 
-            String chromium =
-                    "/Applications/Chromium.app/Contents/MacOS/Chromium";
+            String chromium = "/Applications/Chromium.app/Contents/MacOS/Chromium";
 
             if (new File(chromium).exists()) {
                 return chromium;
@@ -94,21 +105,31 @@ public class ChromeScreenshotService {
         }
 
         if (os.contains("win")) {
-            String chrome1 =
-                    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+            String chrome1 = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 
             if (new File(chrome1).exists()) {
                 return chrome1;
             }
 
-            String chrome2 =
-                    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe";
+            String chrome2 = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe";
 
             if (new File(chrome2).exists()) {
                 return chrome2;
             }
         }
 
-        return "google-chrome";
+        String linuxChromium = "/usr/bin/chromium";
+
+        if (new File(linuxChromium).exists()) {
+            return linuxChromium;
+        }
+
+        String linuxChromiumBrowser = "/usr/bin/chromium-browser";
+
+        if (new File(linuxChromiumBrowser).exists()) {
+            return linuxChromiumBrowser;
+        }
+
+        return "/usr/bin/chromium";
     }
 }
