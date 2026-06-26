@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -23,4 +25,9 @@ public class VideoJob {
     private String productName;
     private String affiliateLink;
     private JobStatus status;
+    private List<String> imagePaths;
+    private int progress;
+    private String currentStep;
+    private String error;
+    private List<String> framePaths;
 }

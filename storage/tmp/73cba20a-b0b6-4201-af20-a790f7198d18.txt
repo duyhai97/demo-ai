@@ -1,0 +1,5 @@
+file '/Users/local/Documents/demo-ai/storage/frames/frame001_ce9fda0c-ff38-4274-be14-b0381ab4576e.png'
+duration 2.0
+file '/Users/local/Documents/demo-ai/storage/frames/frame002_c3236f22-76ff-447c-b71e-15bba9140433.png'
+duration 2.0
+file '/Users/local/Documents/demo-ai/storage/frames/frame002_c3236f22-76ff-447c-b71e-15bba9140433.png'

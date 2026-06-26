@@ -1,221 +1,153 @@
 package com.example.backenai.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
 
-import static java.awt.List.*;
-
 @Service
+@RequiredArgsConstructor
 public class VideoRenderService {
 
     public String render(
-            String imagePath,
-            String voicePath,
-            String subtitlePath
+            List<String> frames,
+            String voicePath
     ) throws Exception {
-        System.out.println("IMAGE = " + imagePath);
-        System.out.println("VOICE = " + voicePath);
-        System.out.println("SUB = " + subtitlePath);
 
-        System.out.println(
-                "VOICE EXISTS = " +
-                        Files.exists(Paths.get(voicePath))
-        );
         Files.createDirectories(
-                Paths.get(
-                        "storage/videos"
-                )
+                Path.of("storage/videos")
         );
+
+        Files.createDirectories(
+                Path.of("storage/tmp")
+        );
+
+        String listFile =
+                "storage/tmp/frame_"
+                        + UUID.randomUUID()
+                        + ".txt";
 
         String output =
                 "storage/videos/video_"
                         + UUID.randomUUID()
                         + ".mp4";
 
-        List cmd = List.of(
+        StringBuilder sb =
+                new StringBuilder();
+
+        for (String frame : frames) {
+
+            sb.append("file '")
+                    .append(
+                            Path.of(frame)
+                                    .toAbsolutePath()
+                                    .toString()
+                                    .replace("\\","/")
+                    )
+                    .append("'\n");
+
+            sb.append("duration 2\n");
+
+        }
+
+        sb.append("file '")
+                .append(
+                        Path.of(
+                                        frames.get(frames.size()-1)
+                                ).toAbsolutePath()
+                                .toString()
+                                .replace("\\","/")
+                )
+                .append("'");
+
+        Files.writeString(
+                Path.of(listFile),
+                sb.toString()
+        );
+
+        ProcessBuilder pb =
+                new ProcessBuilder(
+
                         "ffmpeg",
+
                         "-y",
 
-                        "-loop","1",
-                        "-i",imagePath,
+                        "-f",
+                        "concat",
 
-                        "-i",voicePath,
+                        "-safe",
+                        "0",
 
-                        "-vf",
-                        "scale=1080:1920," +
-                                "zoompan=z='min(zoom+0.0015,1.2)':d=125," +
-                                "subtitles=" +
-                                subtitlePath.replace("\\","/"),
+                        "-i",
+                        listFile,
+
+                        "-i",
+                        voicePath,
+
+                        "-vsync",
+                        "vfr",
+
+                        "-pix_fmt",
+                        "yuv420p",
+
+                        "-c:v",
+                        "libx264",
+
+                        "-c:a",
+                        "aac",
 
                         "-shortest",
-
-                        "-c:v","libx264",
 
                         output
                 );
 
-        ProcessBuilder pb =
-                new ProcessBuilder(cmd);
-
         pb.redirectErrorStream(true);
 
-        Process p = pb.start();
+        System.out.println("==================");
+        System.out.println("FFMPEG");
+        pb.command().forEach(System.out::println);
+        System.out.println("==================");
 
-        try (
-                BufferedReader br =
-                        new BufferedReader(
-                                new InputStreamReader(
-                                        p.getInputStream()
-                                )
-                        )
-        ) {
+        Process process =
+                pb.start();
+
+        try(BufferedReader br =
+                    new BufferedReader(
+                            new InputStreamReader(
+                                    process.getInputStream()
+                            )
+                    )){
 
             String line;
 
-            while ((line = br.readLine()) != null) {
+            while((line=br.readLine())!=null){
 
                 System.out.println(
                         "[FFMPEG] " + line
                 );
+
             }
+
         }
 
-        int code = p.waitFor();
+        int exit =
+                process.waitFor();
 
-        if (code != 0) {
+        if(exit!=0){
 
             throw new RuntimeException(
-                    "FFmpeg failed"
+                    "FFmpeg render failed"
             );
+
         }
 
         return output;
+
     }
 
-    private void createFolders() {
-
-        new File("storage").mkdirs();
-        new File("storage/videos").mkdirs();
-        new File("storage/images").mkdirs();
-    }
-
-    private File createCaptionImage(
-            String productName
-    ) throws Exception {
-
-        int width = 1080;
-        int height = 1920;
-
-        BufferedImage image =
-                new BufferedImage(
-                        width,
-                        height,
-                        BufferedImage.TYPE_INT_RGB
-                );
-
-        Graphics2D g =
-                image.createGraphics();
-
-        g.setRenderingHint(
-                RenderingHints.KEY_ANTIALIASING,
-                RenderingHints.VALUE_ANTIALIAS_ON
-        );
-
-        // background
-        g.setColor(Color.BLACK);
-        g.fillRect(
-                0,
-                0,
-                width,
-                height
-        );
-
-        // title
-        g.setColor(Color.WHITE);
-
-        g.setFont(
-                new Font(
-                        "Arial",
-                        Font.BOLD,
-                        72
-                )
-        );
-
-        drawCenteredText(
-                g,
-                productName,
-                width,
-                700
-        );
-
-        g.setFont(
-                new Font(
-                        "Arial",
-                        Font.PLAIN,
-                        42
-                )
-        );
-
-        drawCenteredText(
-                g,
-                "San pham dang hot tren TikTok",
-                width,
-                850
-        );
-
-        drawCenteredText(
-                g,
-                "Nhan vao gio hang de mua",
-                width,
-                950
-        );
-
-        g.dispose();
-
-        File imageFile =
-                new File(
-                        "storage/images/caption_"
-                                + UUID.randomUUID()
-                                + ".png"
-                );
-
-        ImageIO.write(
-                image,
-                "png",
-                imageFile
-        );
-
-        return imageFile;
-    }
-
-    private void drawCenteredText(
-            Graphics2D g,
-            String text,
-            int width,
-            int y
-    ) {
-
-        FontMetrics fm =
-                g.getFontMetrics();
-
-        int x =
-                (width - fm.stringWidth(text))
-                        / 2;
-
-        g.drawString(
-                text,
-                x,
-                y
-        );
-    }
 }

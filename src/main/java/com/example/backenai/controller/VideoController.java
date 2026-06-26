@@ -1,5 +1,6 @@
 package com.example.backenai.controller;
 
+import com.example.backenai.constant.JobStatus;
 import com.example.backenai.model.CreateVideoRequest;
 import com.example.backenai.model.VideoJob;
 import com.example.backenai.queue.JobQueue;
@@ -28,16 +29,22 @@ public class VideoController {
     }
 
     @PostMapping
-    public VideoJob create(
-            @RequestBody CreateVideoRequest request
-    ) {
+    public VideoJob createVideo(@RequestBody CreateVideoRequest request) {
 
-        VideoJob job =
-                jobService.createJob(
-                        request.getProductName(),
-                        request.getAffiliateLink(),
-                        request.getImagePath()
-                );
+        VideoJob job = new VideoJob();
+
+        job.setJobId(UUID.randomUUID().toString());
+        job.setProductName(request.getProductName());
+        job.setAffiliateLink(request.getAffiliateLink());
+        job.setImagePaths(request.getImagePaths());
+
+        job.setStatus(JobStatus.PENDING);
+        job.setProgress(0);
+        job.setCurrentStep("Đang chờ xử lý");
+
+        jobService.save(job);
+
+        System.out.println("PUSH JOB TO QUEUE = " + job.getJobId());
 
         queue.push(job);
 

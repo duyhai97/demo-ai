@@ -1,0 +1,11 @@
+file '/Users/local/Documents/demo-ai/storage/frames/frame_057dde9e-2914-4155-a169-cba572157efe.png'
+duration 2
+file '/Users/local/Documents/demo-ai/storage/frames/frame_5a714c2e-5e35-4d73-a074-0daba3c1e345.png'
+duration 2
+file '/Users/local/Documents/demo-ai/storage/frames/frame_0d3beb0e-b329-4c3d-a4ba-eca2d105fa49.png'
+duration 2
+file '/Users/local/Documents/demo-ai/storage/frames/frame_9c9bac54-82c2-47e5-b6b9-7f866df6b5d6.png'
+duration 2
+file '/Users/local/Documents/demo-ai/storage/frames/frame_aa4605f6-2acd-4b32-b9e4-383edb28310d.png'
+duration 2
+file '/Users/local/Documents/demo-ai/storage/frames/frame_aa4605f6-2acd-4b32-b9e4-383edb28310d.png'
