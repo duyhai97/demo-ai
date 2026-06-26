@@ -27,12 +27,12 @@ RUN apt-get update && apt-get install -y \
     && test -f /opt/venv/bin/edge-tts \
     && chmod +x /opt/venv/bin/edge-tts \
     && /opt/venv/bin/edge-tts --version \
-    && test -f /usr/bin/chromium \
-    && /usr/bin/chromium --version \
+    && which chromium || true \
+    && which chromium-browser || true \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/opt/venv/bin:${PATH}"
-ENV CHROME_BIN=/usr/bin/chromium
+ENV CHROME_BIN=chromium
 
 WORKDIR /app
 

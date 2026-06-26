@@ -126,6 +126,6 @@ public class ChromeScreenshotService {
             }
         }
 
-        return CHROME_DOCKER_PATH;
+        return System.getenv().getOrDefault("CHROME_BIN", "chromium");
     }
 }
