@@ -13,11 +13,7 @@ public class HtmlFrameService {
     private final HtmlTemplateService htmlTemplateService;
     private final ChromeScreenshotService chromeScreenshotService;
 
-    public List<String> generateFrames(
-            List<String> imagePaths,
-            String productName,
-            List<String> captions
-    ) throws Exception {
+    public List<String> generateFrames(List<String> imagePaths, String productName, List<String> captions) throws Exception {
 
         if (imagePaths == null || imagePaths.isEmpty()) {
             throw new RuntimeException("No images");
@@ -29,27 +25,20 @@ public class HtmlFrameService {
 
         List<String> frames = new ArrayList<>();
 
-        for (int i = 0; i < captions.size(); i++) {
+        for (int i = 0; i < imagePaths.size(); i++) {
 
-            String caption = captions.get(i);
+            String imagePath = imagePaths.get(i);
 
-            String imagePath =
-                    imagePaths.get(i % imagePaths.size());
+            String caption = captions.get(Math.min(i, captions.size() - 1));
 
-            String htmlPath =
-                    htmlTemplateService.createHtml(
-                            imagePath,
-                            productName,
-                            caption
-                    );
+            String htmlPath = htmlTemplateService.createHtml(imagePath, productName, caption);
 
-            String framePath =
-                    chromeScreenshotService.screenshot(
-                            htmlPath
-                    );
+            String framePath = chromeScreenshotService.screenshot(htmlPath);
 
             frames.add(framePath);
         }
+
+        System.out.println("GENERATED FRAME COUNT = " + frames.size());
 
         return frames;
     }

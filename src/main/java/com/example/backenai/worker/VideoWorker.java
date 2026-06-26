@@ -3,13 +3,7 @@ package com.example.backenai.worker;
 import com.example.backenai.constant.JobStatus;
 import com.example.backenai.model.VideoJob;
 import com.example.backenai.queue.JobQueue;
-import com.example.backenai.service.HtmlFrameService;
-import com.example.backenai.service.JobService;
-import com.example.backenai.service.OpenRouterService;
-import com.example.backenai.service.ScriptCleanerService;
-import com.example.backenai.service.ScriptSegmentService;
-import com.example.backenai.service.TtsService;
-import com.example.backenai.service.VideoRenderService;
+import com.example.backenai.service.*;
 import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -51,19 +45,16 @@ public class VideoWorker {
 
                     validateJob(job);
 
+                    System.out.println("IMAGE COUNT IN WORKER = " + job.getImagePaths().size());
+                    System.out.println("IMAGE PATHS IN WORKER = " + job.getImagePaths());
+
                     update(job, JobStatus.PROCESSING, 15, "Đang tạo lời thoại AI");
 
-                    String rawScript =
-                            openRouterService.generateVoiceScript(
-                                    job.getProductName()
-                            );
+                    String rawScript = openRouterService.generateVoiceScript(job.getProductName());
 
                     update(job, JobStatus.PROCESSING, 25, "Đang làm sạch lời thoại");
 
-                    String cleanScript =
-                            scriptCleanerService.clean(
-                                    rawScript
-                            );
+                    String cleanScript = scriptCleanerService.clean(rawScript);
 
                     if (cleanScript == null || cleanScript.isBlank()) {
                         throw new RuntimeException("Script is empty");
@@ -76,15 +67,9 @@ public class VideoWorker {
 
                     update(job, JobStatus.PROCESSING, 40, "Đang tạo giọng đọc AI");
 
-                    String voicePath =
-                            ttsService.generate(
-                                    cleanScript
-                            );
+                    String voicePath = ttsService.generate(cleanScript);
 
-                    double voiceDuration =
-                            ttsService.getAudioDurationSeconds(
-                                    voicePath
-                            );
+                    double voiceDuration = ttsService.getAudioDurationSeconds(voicePath);
 
                     job.setVoicePath(voicePath);
                     jobService.save(job);
@@ -94,25 +79,18 @@ public class VideoWorker {
 
                     update(job, JobStatus.PROCESSING, 55, "Đang tạo phụ đề");
 
-                    List<String> captions =
-                            scriptSegmentService.splitAndWrap(
-                                    cleanScript
-                            );
+                    List<String> captions = scriptSegmentService.splitAndWrap(cleanScript);
 
                     if (captions == null || captions.isEmpty()) {
                         throw new RuntimeException("Captions is empty");
                     }
 
+                    System.out.println("CAPTION COUNT = " + captions.size());
                     System.out.println("CAPTIONS = " + captions);
 
                     update(job, JobStatus.PROCESSING, 70, "Đang render ảnh thành frame");
 
-                    List<String> frames =
-                            htmlFrameService.generateFrames(
-                                    job.getImagePaths(),
-                                    job.getProductName(),
-                                    captions
-                            );
+                    List<String> frames = htmlFrameService.generateFrames(job.getImagePaths(), job.getProductName(), captions);
 
                     if (frames == null || frames.isEmpty()) {
                         throw new RuntimeException("Frames is empty");
@@ -121,25 +99,18 @@ public class VideoWorker {
                     job.setFramePaths(frames);
                     jobService.save(job);
 
+                    System.out.println("FRAME COUNT IN WORKER = " + frames.size());
                     System.out.println("FRAMES = " + frames);
 
                     update(job, JobStatus.PROCESSING, 88, "Đang ghép video theo thời lượng giọng đọc");
 
-                    String videoPath =
-                            renderService.render(
-                                    frames,
-                                    voicePath
-                            );
+                    String videoPath = renderService.render(frames, voicePath);
 
                     job.setVideoPath(videoPath);
 
-                    String fileName =
-                            new File(videoPath)
-                                    .getName();
+                    String fileName = new File(videoPath).getName();
 
-                    job.setVideoUrl(
-                            "/videos/" + fileName
-                    );
+                    job.setVideoUrl("/videos/" + fileName);
 
                     update(job, JobStatus.DONE, 100, "Hoàn tất video");
 
@@ -180,12 +151,7 @@ public class VideoWorker {
         }
     }
 
-    private void update(
-            VideoJob job,
-            JobStatus status,
-            int progress,
-            String currentStep
-    ) {
+    private void update(VideoJob job, JobStatus status, int progress, String currentStep) {
         job.setStatus(status);
         job.setProgress(progress);
         job.setCurrentStep(currentStep);

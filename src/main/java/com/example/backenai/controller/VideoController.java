@@ -10,11 +10,14 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/videos")
+@CrossOrigin(origins = "*")
 public class VideoController {
 
     private final JobService jobService;
@@ -29,8 +32,9 @@ public class VideoController {
     }
 
     @PostMapping
-    public VideoJob createVideo(@RequestBody CreateVideoRequest request) {
-
+    public VideoJob createVideo(
+            @RequestBody CreateVideoRequest request
+    ) {
         VideoJob job = new VideoJob();
 
         job.setJobId(UUID.randomUUID().toString());
@@ -45,6 +49,7 @@ public class VideoController {
         jobService.save(job);
 
         System.out.println("PUSH JOB TO QUEUE = " + job.getJobId());
+        System.out.println("IMAGE COUNT = " + job.getImagePaths().size());
 
         queue.push(job);
 
@@ -62,9 +67,8 @@ public class VideoController {
             value = "/upload",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
-    public Map<String, String> upload(
-            @RequestParam("file")
-            MultipartFile file
+    public Map<String, Object> uploadImages(
+            @RequestParam("files") List<MultipartFile> files
     ) throws Exception {
 
         String uploadDir =
@@ -77,23 +81,36 @@ public class VideoController {
             dir.mkdirs();
         }
 
-        String fileName =
-                UUID.randomUUID()
-                        + ".jpg";
+        List<String> imagePaths = new ArrayList<>();
 
-        File target =
-                new File(dir, fileName);
+        for (MultipartFile file : files) {
+            if (file == null || file.isEmpty()) {
+                continue;
+            }
 
-        file.transferTo(target);
+            String originalName = file.getOriginalFilename();
+            String ext = ".jpg";
 
-        System.out.println(
-                "UPLOAD SUCCESS = "
-                        + target.getAbsolutePath()
-        );
+            if (originalName != null && originalName.contains(".")) {
+                ext = originalName.substring(originalName.lastIndexOf("."));
+            }
+
+            String fileName = UUID.randomUUID() + ext;
+
+            File target = new File(dir, fileName);
+
+            file.transferTo(target);
+
+            System.out.println("UPLOAD SUCCESS = " + target.getAbsolutePath());
+
+            imagePaths.add(target.getAbsolutePath());
+        }
+
+        System.out.println("UPLOAD IMAGE COUNT = " + imagePaths.size());
 
         return Map.of(
-                "imagePath",
-                target.getAbsolutePath()
+                "count", imagePaths.size(),
+                "imagePaths", imagePaths
         );
     }
 }

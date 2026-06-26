@@ -30,17 +30,18 @@ public class VideoRenderService {
         Files.createDirectories(Path.of("storage/videos"));
         Files.createDirectories(Path.of("storage/tmp"));
 
-        double audioDuration = ttsService.getAudioDurationSeconds(voicePath);
+        String absoluteVoicePath = Path.of(voicePath)
+                .toAbsolutePath()
+                .toString()
+                .replace("\\", "/");
+
+        double audioDuration = ttsService.getAudioDurationSeconds(absoluteVoicePath);
 
         if (audioDuration <= 0) {
             throw new RuntimeException("Invalid audio duration: " + audioDuration);
         }
 
         double frameDuration = audioDuration / frames.size();
-
-        if (frameDuration < 0.3) {
-            frameDuration = 0.3;
-        }
 
         System.out.println("AUDIO DURATION = " + audioDuration);
         System.out.println("FRAME COUNT = " + frames.size());
@@ -59,7 +60,6 @@ public class VideoRenderService {
         StringBuilder sb = new StringBuilder();
 
         for (String frame : frames) {
-
             String framePath = Path.of(frame)
                     .toAbsolutePath()
                     .toString()
@@ -89,15 +89,25 @@ public class VideoRenderService {
                 StandardCharsets.UTF_8
         );
 
+        String absoluteListFile = Path.of(listFile)
+                .toAbsolutePath()
+                .toString()
+                .replace("\\", "/");
+
+        String absoluteOutput = Path.of(output)
+                .toAbsolutePath()
+                .toString()
+                .replace("\\", "/");
+
         ProcessBuilder pb = new ProcessBuilder(
                 "ffmpeg",
                 "-y",
 
                 "-f", "concat",
                 "-safe", "0",
-                "-i", listFile,
+                "-i", absoluteListFile,
 
-                "-i", voicePath,
+                "-i", absoluteVoicePath,
 
                 "-t", formatDuration(audioDuration),
 
@@ -113,7 +123,7 @@ public class VideoRenderService {
                 "-movflags", "+faststart",
                 "-shortest",
 
-                output
+                absoluteOutput
         );
 
         pb.redirectErrorStream(true);

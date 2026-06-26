@@ -14,19 +14,20 @@ public class JobService {
 
     private final Map<String, VideoJob> jobs = new ConcurrentHashMap<>();
 
-    public VideoJob createJob(String productName, String affiliateLink, String imagePath) {
-
+    public VideoJob createJob(
+            String productName,
+            String affiliateLink,
+            List<String> imagePaths
+    ) {
         VideoJob job = new VideoJob();
 
         job.setJobId(UUID.randomUUID().toString());
-
         job.setProductName(productName);
-
         job.setAffiliateLink(affiliateLink);
-
-        job.setImagePath(imagePath);
-
+        job.setImagePaths(imagePaths);
         job.setStatus(JobStatus.PENDING);
+        job.setProgress(0);
+        job.setCurrentStep("Đang chờ xử lý");
 
         jobs.put(job.getJobId(), job);
 
@@ -39,26 +40,6 @@ public class JobService {
 
     public void save(VideoJob job) {
         jobs.put(job.getJobId(), job);
-    }
-
-
-    public VideoJob createJob(
-            String productName,
-            String affiliateLink,
-            List<String> imagePaths
-    ) {
-
-        VideoJob job = new VideoJob();
-
-        job.setJobId(UUID.randomUUID().toString());
-        job.setProductName(productName);
-        job.setAffiliateLink(affiliateLink);
-        job.setImagePaths(imagePaths);
-        job.setStatus(JobStatus.PENDING);
-
-        jobs.put(job.getJobId(), job);
-
-        return job;
     }
 
     public void updateProgress(
