@@ -51,7 +51,6 @@ public class VideoWorker {
 
                     validateJob(job);
 
-                    // 1. AI sinh lời thoại ngắn
                     update(job, JobStatus.PROCESSING, 15, "Đang tạo lời thoại AI");
 
                     String rawScript =
@@ -59,7 +58,6 @@ public class VideoWorker {
                                     job.getProductName()
                             );
 
-                    // 2. Làm sạch script
                     update(job, JobStatus.PROCESSING, 25, "Đang làm sạch lời thoại");
 
                     String cleanScript =
@@ -76,7 +74,6 @@ public class VideoWorker {
 
                     System.out.println("SCRIPT = " + cleanScript);
 
-                    // 3. TTS sinh voice mp3
                     update(job, JobStatus.PROCESSING, 40, "Đang tạo giọng đọc AI");
 
                     String voicePath =
@@ -84,12 +81,17 @@ public class VideoWorker {
                                     cleanScript
                             );
 
+                    double voiceDuration =
+                            ttsService.getAudioDurationSeconds(
+                                    voicePath
+                            );
+
                     job.setVoicePath(voicePath);
                     jobService.save(job);
 
                     System.out.println("VOICE = " + voicePath);
+                    System.out.println("VOICE DURATION = " + voiceDuration);
 
-                    // 4. Tách câu + wrap caption
                     update(job, JobStatus.PROCESSING, 55, "Đang tạo phụ đề");
 
                     List<String> captions =
@@ -103,7 +105,6 @@ public class VideoWorker {
 
                     System.out.println("CAPTIONS = " + captions);
 
-                    // 5. HTML -> Chrome screenshot -> PNG frames
                     update(job, JobStatus.PROCESSING, 70, "Đang render ảnh thành frame");
 
                     List<String> frames =
@@ -122,8 +123,7 @@ public class VideoWorker {
 
                     System.out.println("FRAMES = " + frames);
 
-                    // 6. FFmpeg ghép frames + voice -> video
-                    update(job, JobStatus.PROCESSING, 88, "Đang ghép video bằng FFmpeg");
+                    update(job, JobStatus.PROCESSING, 88, "Đang ghép video theo thời lượng giọng đọc");
 
                     String videoPath =
                             renderService.render(

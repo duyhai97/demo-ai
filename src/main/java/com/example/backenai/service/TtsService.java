@@ -29,7 +29,7 @@ public class TtsService {
 
     public String generate(String text) throws Exception {
 
-        System.out.println("TTS SERVICE VERSION = ABSOLUTE_EDGE_TTS_002");
+        System.out.println("TTS SERVICE VERSION = ABSOLUTE_EDGE_TTS_003");
 
         Files.createDirectories(Paths.get("storage/audio"));
         Files.createDirectories(Paths.get("storage/tmp"));
@@ -53,7 +53,9 @@ public class TtsService {
                     Path audioPath = Paths.get(output);
 
                     if (isValidAudio(audioPath)) {
+                        double duration = getAudioDurationSeconds(output);
                         System.out.println("VOICE OK = " + output);
+                        System.out.println("VOICE DURATION = " + duration);
                         return output;
                     }
 
@@ -133,6 +135,58 @@ public class TtsService {
         deleteIfExists(txtFile);
 
         return output;
+    }
+
+    public double getAudioDurationSeconds(String audioPath) throws Exception {
+
+        ProcessBuilder pb = new ProcessBuilder(
+                "ffprobe",
+                "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                audioPath
+        );
+
+        pb.redirectErrorStream(true);
+
+        System.out.println("FFPROBE CMD = " + pb.command());
+
+        Process process = pb.start();
+
+        String output;
+
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)
+        )) {
+            output = br.readLine();
+        }
+
+        boolean finished = process.waitFor(15, TimeUnit.SECONDS);
+
+        if (!finished) {
+            process.destroyForcibly();
+            throw new RuntimeException("ffprobe timeout: " + audioPath);
+        }
+
+        int code = process.exitValue();
+
+        if (code != 0 || output == null || output.isBlank()) {
+            throw new RuntimeException("Cannot read audio duration: " + audioPath);
+        }
+
+        double duration = Double.parseDouble(output.trim());
+
+        if (duration <= 0) {
+            throw new RuntimeException("Invalid audio duration: " + duration);
+        }
+
+        System.out.println("AUDIO DURATION SECONDS = " + duration);
+
+        return duration;
+    }
+
+    public int getAudioDurationMillis(String audioPath) throws Exception {
+        return (int) Math.round(getAudioDurationSeconds(audioPath) * 1000);
     }
 
     private String normalizeText(String text) {
