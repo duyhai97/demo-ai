@@ -9,8 +9,13 @@ RUN apt-get update && apt-get install -y \
     && python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --upgrade pip \
     && /opt/venv/bin/pip install edge-tts \
-    && ln -s /opt/venv/bin/edge-tts /usr/local/bin/edge-tts \
+    && test -f /opt/venv/bin/edge-tts \
+    && chmod +x /opt/venv/bin/edge-tts \
+    && /opt/venv/bin/edge-tts --version \
     && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/opt/venv/bin:${PATH}"
+ENV CHROME_BIN=/usr/bin/chromium
 
 WORKDIR /app
 
