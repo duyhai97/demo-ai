@@ -1,17 +1,21 @@
 package com.example.backenai.model;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
 @Getter
-@AllArgsConstructor
-public class LoginResponse {
-
-    private String token;
+@Setter
+public class CreateUserRequest {
 
     private String username;
+
+    private String password;
+
+    private String fullName;
+
+    private String email;
 
     private List<String> roles;
 }

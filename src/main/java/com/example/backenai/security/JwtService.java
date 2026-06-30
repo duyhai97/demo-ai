@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class JwtService {
@@ -19,12 +20,16 @@ public class JwtService {
     @Value("${app.jwt.expiration-ms}")
     private long expirationMs;
 
-    public String generateToken(String username) {
+    public String generateToken(
+            String username,
+            List<String> roles
+    ) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
                 .subject(username)
+                .claim("roles", roles)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(getKey())
@@ -32,13 +37,19 @@ public class JwtService {
     }
 
     public String extractUsername(String token) {
-        Claims claims = Jwts.parser()
-                .verifyWith(getKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        return extractClaims(token).getSubject();
+    }
 
-        return claims.getSubject();
+    public List<String> extractRoles(String token) {
+        Object roles = extractClaims(token).get("roles");
+
+        if (roles instanceof List<?> list) {
+            return list.stream()
+                    .map(String::valueOf)
+                    .toList();
+        }
+
+        return List.of();
     }
 
     public boolean isValid(String token) {
@@ -48,6 +59,14 @@ public class JwtService {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private Claims extractClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(getKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     private SecretKey getKey() {
