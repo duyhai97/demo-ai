@@ -3,41 +3,38 @@ package com.example.backenai.service;
 import com.example.backenai.constant.JobStatus;
 import com.example.backenai.entity.JobLogEntity;
 import com.example.backenai.entity.UploadedImageEntity;
+import com.example.backenai.entity.UserEntity;
 import com.example.backenai.entity.VideoJobEntity;
 import com.example.backenai.model.VideoJob;
-import com.example.backenai.repository.JobLogRepository;
-import com.example.backenai.repository.UploadedImageRepository;
-import com.example.backenai.repository.VideoJobRepository;
+import com.example.backenai.repository.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Service
+@AllArgsConstructor
 public class JobService {
 
     private final VideoJobRepository videoJobRepository;
     private final UploadedImageRepository uploadedImageRepository;
     private final JobLogRepository jobLogRepository;
     private final ObjectMapper objectMapper;
+    private final UserRepository userRepository;
+    private final PurchaseOrderRepository purchaseOrderRepository;
 
-    public JobService(
-            VideoJobRepository videoJobRepository,
-            UploadedImageRepository uploadedImageRepository,
-            JobLogRepository jobLogRepository,
-            ObjectMapper objectMapper
-    ) {
-        this.videoJobRepository = videoJobRepository;
-        this.uploadedImageRepository = uploadedImageRepository;
-        this.jobLogRepository = jobLogRepository;
-        this.objectMapper = objectMapper;
-    }
 
     @Transactional
     public VideoJob createJob(
@@ -195,6 +192,55 @@ public class JobService {
         return videoJobRepository
                 .findByCreatedByOrderByCreatedAtDesc(username, pageable)
                 .map(this::toModel);
+    }
+
+    public void validateDailyVideoLimit(Authentication authentication) {
+        String username = authentication.getName();
+
+        boolean isAdmin = authentication.getAuthorities()
+                .stream()
+                .anyMatch(a ->
+                        "ADMIN".equals(a.getAuthority())
+                                || "ROLE_ADMIN".equals(a.getAuthority())
+                );
+
+        if (isAdmin) {
+            return;
+        }
+
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "User not found"
+                ));
+
+        int baseLimit = user.getDailyVideoLimit() == null
+                ? 0
+                : user.getDailyVideoLimit();
+
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
+
+        long usedToday = videoJobRepository.countByCreatedByAndCreatedAtBetween(
+                username,
+                startOfDay,
+                endOfDay
+        );
+
+        long extraVideosToday = purchaseOrderRepository.sumPaidExtraVideosToday(
+                username,
+                startOfDay,
+                endOfDay
+        );
+
+        long finalLimit = baseLimit + extraVideosToday;
+
+        if (usedToday >= finalLimit) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Bạn đã hết lượt tạo video hôm nay. Vui lòng mua thêm lượt."
+            );
+        }
     }
 
 }

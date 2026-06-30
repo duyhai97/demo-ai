@@ -20,4 +20,6 @@ public class UserResponse {
     private Boolean enabled;
 
     private List<String> roles;
+
+    private Integer dailyVideoLimit;
 }

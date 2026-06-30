@@ -18,4 +18,6 @@ public class CreateUserRequest {
     private String email;
 
     private List<String> roles;
+
+    private Integer dailyVideoLimit;
 }

@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface VideoJobRepository extends JpaRepository<VideoJobEntity, Long> {
@@ -14,4 +15,10 @@ public interface VideoJobRepository extends JpaRepository<VideoJobEntity, Long> 
     Page<VideoJobEntity> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     Page<VideoJobEntity> findByCreatedByOrderByCreatedAtDesc(String createdBy, Pageable pageable);
+
+    long countByCreatedByAndCreatedAtBetween(
+            String createdBy,
+            LocalDateTime start,
+            LocalDateTime end
+    );
 }

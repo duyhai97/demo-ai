@@ -37,6 +37,8 @@ public class VideoController {
             @RequestBody CreateVideoRequest request,
             Authentication authentication
     ) {
+
+        jobService.validateDailyVideoLimit(authentication);
         VideoJob job = new VideoJob();
 
         job.setJobId(UUID.randomUUID().toString());

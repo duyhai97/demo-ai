@@ -45,6 +45,9 @@ public class UserEntity {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "daily_video_limit")
+    private Integer dailyVideoLimit = 5;
+
     @PrePersist
     public void prePersist() {
         LocalDateTime now = LocalDateTime.now();

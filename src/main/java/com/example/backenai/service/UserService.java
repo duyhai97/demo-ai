@@ -85,7 +85,8 @@ public class UserService {
                 user.getRoles()
                         .stream()
                         .map(RoleEntity::getName)
-                        .toList()
+                        .toList(),
+                user.getDailyVideoLimit()
         );
     }
 }
