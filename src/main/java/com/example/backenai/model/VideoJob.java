@@ -30,4 +30,6 @@ public class VideoJob {
     private String currentStep;
     private String error;
     private List<String> framePaths;
+    private String createdBy;
+    private String createdAt;
 }

@@ -10,6 +10,8 @@ import com.example.backenai.repository.UploadedImageRepository;
 import com.example.backenai.repository.VideoJobRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -85,6 +87,7 @@ public class JobService {
         entity.setCurrentStep(job.getCurrentStep());
         entity.setError(job.getError());
         entity.setFramePaths(toJson(job.getFramePaths()));
+        entity.setCreatedBy(job.getCreatedBy());
 
         videoJobRepository.save(entity);
 
@@ -150,7 +153,8 @@ public class JobService {
         job.setProgress(entity.getProgress() == null ? 0 : entity.getProgress());
         job.setCurrentStep(entity.getCurrentStep());
         job.setError(entity.getError());
-
+        job.setCreatedBy(entity.getCreatedBy());
+        job.setCreatedAt(entity.getCreatedAt() == null ? null : entity.getCreatedAt().toString());
         return job;
     }
 
@@ -180,4 +184,11 @@ public class JobService {
             return new ArrayList<>();
         }
     }
+
+    @Transactional(readOnly = true)
+    public Page<VideoJob> findAll(Pageable pageable) {
+        return videoJobRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(this::toModel);
+    }
+
 }

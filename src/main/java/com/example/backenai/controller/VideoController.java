@@ -5,7 +5,10 @@ import com.example.backenai.model.CreateVideoRequest;
 import com.example.backenai.model.VideoJob;
 import com.example.backenai.queue.JobQueue;
 import com.example.backenai.service.JobService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,17 +26,15 @@ public class VideoController {
     private final JobService jobService;
     private final JobQueue queue;
 
-    public VideoController(
-            JobService jobService,
-            JobQueue queue
-    ) {
+    public VideoController(JobService jobService, JobQueue queue) {
         this.jobService = jobService;
         this.queue = queue;
     }
 
     @PostMapping
     public VideoJob createVideo(
-            @RequestBody CreateVideoRequest request
+            @RequestBody CreateVideoRequest request,
+            Authentication authentication
     ) {
         VideoJob job = new VideoJob();
 
@@ -41,6 +42,7 @@ public class VideoController {
         job.setProductName(request.getProductName());
         job.setAffiliateLink(request.getAffiliateLink());
         job.setImagePaths(request.getImagePaths());
+        job.setCreatedBy(authentication == null ? "unknown" : authentication.getName());
 
         job.setStatus(JobStatus.PENDING);
         job.setProgress(0);
@@ -48,19 +50,22 @@ public class VideoController {
 
         jobService.save(job);
 
-        System.out.println("PUSH JOB TO QUEUE = " + job.getJobId());
-        System.out.println("IMAGE COUNT = " + job.getImagePaths().size());
-
         queue.push(job);
 
         return job;
     }
 
     @GetMapping("/{jobId}")
-    public VideoJob get(
-            @PathVariable String jobId
-    ) {
+    public VideoJob get(@PathVariable String jobId) {
         return jobService.get(jobId);
+    }
+
+    @GetMapping
+    public Page<VideoJob> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return jobService.findAll(PageRequest.of(page, size));
     }
 
     @PostMapping(
@@ -71,9 +76,7 @@ public class VideoController {
             @RequestParam("files") List<MultipartFile> files
     ) throws Exception {
 
-        String uploadDir =
-                System.getProperty("user.dir")
-                        + "/storage/images";
+        String uploadDir = System.getProperty("user.dir") + "/storage/images";
 
         File dir = new File(uploadDir);
 
@@ -96,17 +99,12 @@ public class VideoController {
             }
 
             String fileName = UUID.randomUUID() + ext;
-
             File target = new File(dir, fileName);
 
             file.transferTo(target);
 
-            System.out.println("UPLOAD SUCCESS = " + target.getAbsolutePath());
-
             imagePaths.add(target.getAbsolutePath());
         }
-
-        System.out.println("UPLOAD IMAGE COUNT = " + imagePaths.size());
 
         return Map.of(
                 "count", imagePaths.size(),
