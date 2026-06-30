@@ -191,4 +191,10 @@ public class JobService {
                 .map(this::toModel);
     }
 
+    public Page<VideoJob> findByCreatedBy(String username, Pageable pageable) {
+        return videoJobRepository
+                .findByCreatedByOrderByCreatedAtDesc(username, pageable)
+                .map(this::toModel);
+    }
+
 }

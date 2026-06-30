@@ -7,6 +7,7 @@ import com.example.backenai.queue.JobQueue;
 import com.example.backenai.service.JobService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -47,7 +48,6 @@ public class VideoController {
         job.setStatus(JobStatus.PENDING);
         job.setProgress(0);
         job.setCurrentStep("Đang chờ xử lý");
-
         jobService.save(job);
 
         queue.push(job);
@@ -66,6 +66,21 @@ public class VideoController {
             @RequestParam(defaultValue = "10") int size
     ) {
         return jobService.findAll(PageRequest.of(page, size));
+    }
+
+    @GetMapping
+    public Page<VideoJob> getVideos(Pageable pageable, Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities()
+                .stream()
+                .anyMatch(a ->
+                        a.getAuthority().equals("ADMIN")
+                                || a.getAuthority().equals("ROLE_ADMIN")
+                );
+        if (isAdmin) {
+            return jobService.findAll(pageable);
+        } else {
+            return jobService.findByCreatedBy(authentication.getName(), pageable);
+        }
     }
 
     @PostMapping(

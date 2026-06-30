@@ -12,4 +12,6 @@ public interface VideoJobRepository extends JpaRepository<VideoJobEntity, Long> 
     Optional<VideoJobEntity> findByJobId(String jobId);
 
     Page<VideoJobEntity> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    Page<VideoJobEntity> findByCreatedByOrderByCreatedAtDesc(String createdBy, Pageable pageable);
 }
