@@ -24,6 +24,7 @@ public class PurchaseService {
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final PurchaseProperties purchaseProperties;
     private final PurchaseNotificationService purchaseNotificationService;
+    private final ResendEmailService resendEmailService;
 
     public PurchaseQrResponse generateQr(String username) {
         String orderId = UUID.randomUUID().toString();
@@ -46,9 +47,8 @@ public class PurchaseService {
         PurchaseOrderEntity saved = purchaseOrderRepository.save(entity);
 
         try {
-            purchaseNotificationService.sendNewPurchaseToAdmin(saved);
+            resendEmailService.sendNewPurchaseToAdmin(saved);
         } catch (Exception e) {
-            // Không làm fail đơn mua nếu gửi mail lỗi
             System.err.println("Send purchase email failed: " + e.getMessage());
         }
 
