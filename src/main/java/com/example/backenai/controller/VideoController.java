@@ -61,14 +61,6 @@ public class VideoController {
     }
 
     @GetMapping
-    public Page<VideoJob> list(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        return jobService.findAll(PageRequest.of(page, size));
-    }
-
-    @GetMapping
     public Page<VideoJob> getVideos(Pageable pageable, Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities()
                 .stream()
