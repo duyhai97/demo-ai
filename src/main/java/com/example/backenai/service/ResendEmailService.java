@@ -16,7 +16,7 @@ public class ResendEmailService {
     @Value("${resend.api-key}")
     private String resendApiKey;
 
-    @Value("${app.admin.email}")
+    @Value("${spring.mail.username}")
     private String adminEmail;
 
     @Value("${app.admin.review-url}")
