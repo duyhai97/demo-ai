@@ -3,6 +3,7 @@ package com.example.backenai.controller;
 import com.example.backenai.constant.JobStatus;
 import com.example.backenai.model.CreateVideoRequest;
 import com.example.backenai.model.VideoJob;
+import com.example.backenai.model.VideoQuotaResponse;
 import com.example.backenai.queue.JobQueue;
 import com.example.backenai.service.JobService;
 import org.springframework.data.domain.Page;
@@ -119,5 +120,10 @@ public class VideoController {
                 "count", imagePaths.size(),
                 "imagePaths", imagePaths
         );
+    }
+
+    @GetMapping("/quota")
+    public VideoQuotaResponse quota(Authentication authentication) {
+        return jobService.getQuota(authentication);
     }
 }

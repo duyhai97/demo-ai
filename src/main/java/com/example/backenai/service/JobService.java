@@ -6,6 +6,7 @@ import com.example.backenai.entity.UploadedImageEntity;
 import com.example.backenai.entity.UserEntity;
 import com.example.backenai.entity.VideoJobEntity;
 import com.example.backenai.model.VideoJob;
+import com.example.backenai.model.VideoQuotaResponse;
 import com.example.backenai.repository.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -195,6 +196,21 @@ public class JobService {
     }
 
     public void validateDailyVideoLimit(Authentication authentication) {
+        VideoQuotaResponse quota = getQuota(authentication);
+
+        if (quota.dailyLimit() == -1) {
+            return;
+        }
+
+        if (quota.remainingToday() <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Bạn đã hết lượt tạo video hôm nay. Vui lòng mua thêm lượt."
+            );
+        }
+    }
+
+    public VideoQuotaResponse getQuota(Authentication authentication) {
         String username = authentication.getName();
 
         boolean isAdmin = authentication.getAuthorities()
@@ -205,7 +221,13 @@ public class JobService {
                 );
 
         if (isAdmin) {
-            return;
+            return new VideoQuotaResponse(
+                    -1,
+                    0,
+                    0,
+                    -1,
+                    -1
+            );
         }
 
         UserEntity user = userRepository.findByUsername(username)
@@ -214,33 +236,35 @@ public class JobService {
                         "User not found"
                 ));
 
-        int baseLimit = user.getDailyVideoLimit() == null
+        int dailyLimit = user.getDailyVideoLimit() == null
                 ? 0
                 : user.getDailyVideoLimit();
 
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
-        LocalDateTime endOfDay = startOfDay.plusDays(1);
+        LocalDateTime start = LocalDate.now().atStartOfDay();
+        LocalDateTime end = start.plusDays(1);
 
         long usedToday = videoJobRepository.countByCreatedByAndCreatedAtBetween(
                 username,
-                startOfDay,
-                endOfDay
+                start,
+                end
         );
 
-        long extraVideosToday = purchaseOrderRepository.sumPaidExtraVideosToday(
+        long extraToday = purchaseOrderRepository.sumPaidExtraVideosToday(
                 username,
-                startOfDay,
-                endOfDay
+                start,
+                end
         );
 
-        long finalLimit = baseLimit + extraVideosToday;
+        long totalToday = dailyLimit + extraToday;
+        long remainingToday = Math.max(0, totalToday - usedToday);
 
-        if (usedToday >= finalLimit) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Bạn đã hết lượt tạo video hôm nay. Vui lòng mua thêm lượt."
-            );
-        }
+        return new VideoQuotaResponse(
+                dailyLimit,
+                usedToday,
+                extraToday,
+                totalToday,
+                remainingToday
+        );
     }
 
 }
