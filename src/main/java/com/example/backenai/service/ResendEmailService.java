@@ -6,6 +6,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 public class ResendEmailService {
@@ -34,19 +37,16 @@ public class ResendEmailService {
             return;
         }
 
-        String body = """
-                {
-                  "from": "TikTok AI <onboarding@resend.dev>",
-                  "to": ["%s"],
-                  "subject": "Có đơn mua lượt video mới",
-                  "html": "%s"
-                }
-                """.formatted(adminEmail, buildHtml(order));
+        Map<String, Object> body = Map.of(
+                "from", "TikTok AI <onboarding@resend.dev>",
+                "to", List.of(adminEmail),
+                "subject", "Có đơn mua lượt video mới",
+                "html", buildHtml(order)
+        );
 
         restClient.post()
                 .uri("/emails")
                 .header("Authorization", "Bearer " + resendApiKey)
-                .header("Content-Type", "application/json")
                 .body(body)
                 .retrieve()
                 .toBodilessEntity();
@@ -61,9 +61,7 @@ public class ResendEmailService {
                 <p><b>Số tiền:</b> %,d VND</p>
                 <p><b>Nội dung CK:</b> %s</p>
                 <p><b>Trạng thái:</b> %s</p>
-                <p>
-                    <a href="%s">Mở màn duyệt đơn</a>
-                </p>
+                <p><a href="%s">Mở màn duyệt đơn</a></p>
                 """.formatted(
                 order.getUsername(),
                 order.getPackageCode(),
@@ -72,6 +70,6 @@ public class ResendEmailService {
                 order.getTransferContent(),
                 order.getStatus(),
                 reviewUrl
-        ).replace("\"", "\\\"");
+        );
     }
 }
