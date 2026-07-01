@@ -39,19 +39,24 @@ public class GenerateFrameStep implements VideoStep {
             throw new RuntimeException("Image paths is empty before frame generation");
         }
 
-        List<String> captions =
-                scriptSegmentService.splitAndWrap(
-                        job.getScript()
-                );
+        List<String> captions;
+
+        if (job.getVideoPlan() != null) {
+            captions = scriptSegmentService.splitAndWrap(job.getVideoPlan());
+        } else {
+            captions = scriptSegmentService.splitAndWrap(job.getScript());
+        }
 
         if (captions == null || captions.isEmpty()) {
             throw new RuntimeException("Captions is empty");
         }
 
         double audioDuration =
-                ttsService.getAudioDurationSeconds(
-                        job.getVoicePath()
-                );
+                ttsService.getAudioDurationSeconds(job.getVoicePath());
+
+        if (audioDuration <= 0) {
+            throw new RuntimeException("Invalid audio duration: " + audioDuration);
+        }
 
         List<CaptionSegment> timeline =
                 subtitleTimelineService.build(
@@ -60,9 +65,7 @@ public class GenerateFrameStep implements VideoStep {
                 );
 
         String subtitlePath =
-                subtitleService.create(
-                        timeline
-                );
+                subtitleService.create(timeline);
 
         job.setSubtitlePath(subtitlePath);
         jobService.save(job);

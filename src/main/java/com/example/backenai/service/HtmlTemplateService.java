@@ -15,6 +15,15 @@ public class HtmlTemplateService {
             String productName,
             String caption
     ) throws Exception {
+        return createHtml(imagePath, productName, caption, "zoom_in");
+    }
+
+    public String createHtml(
+            String imagePath,
+            String productName,
+            String caption,
+            String effect
+    ) throws Exception {
 
         Files.createDirectories(Path.of("storage/html"));
 
@@ -29,11 +38,9 @@ public class HtmlTemplateService {
                         .toUri()
                         .toString();
 
-        String safeProductName =
-                escape(productName);
-
-        String safeCaption =
-                escape(caption);
+        String safeProductName = escape(productName);
+        String safeCaption = escape(caption);
+        String safeEffect = safeEffect(effect);
 
         String html = """
 <!DOCTYPE html>
@@ -67,44 +74,60 @@ html, body {
 
 .bg {
   position: absolute;
-  inset: -80px;
+  inset: -90px;
   background-image: url('%s');
   background-size: cover;
   background-position: center;
-  filter: blur(42px) saturate(1.25);
-  transform: scale(1.2);
-  opacity: 0.5;
+  filter: blur(46px) saturate(1.35);
+  transform: scale(1.22);
+  opacity: 0.54;
 }
 
 .vignette {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.12) 45%%, rgba(0,0,0,0.72)),
-    radial-gradient(circle at center, transparent 38%%, rgba(0,0,0,0.55));
+    linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.10) 42%%, rgba(0,0,0,0.78)),
+    radial-gradient(circle at center, transparent 38%%, rgba(0,0,0,0.58));
 }
 
 .card {
   position: absolute;
-  top: 165px;
-  left: 80px;
-  width: 920px;
-  height: 1040px;
-  border-radius: 64px;
+  top: 150px;
+  left: 70px;
+  width: 940px;
+  height: 1080px;
+  border-radius: 66px;
   background: rgba(255,255,255,0.10);
   backdrop-filter: blur(14px);
   box-shadow:
-    0 50px 130px rgba(0,0,0,0.62),
-    inset 0 0 0 2px rgba(255,255,255,0.18);
+    0 54px 140px rgba(0,0,0,0.66),
+    inset 0 0 0 2px rgba(255,255,255,0.20);
   overflow: hidden;
-  border: 2px solid rgba(255,255,255,0.20);
+  border: 2px solid rgba(255,255,255,0.22);
 }
 
 .product {
   width: 100%%;
   height: 100%%;
   object-fit: cover;
-  transform: scale(1.06) translateY(-8px);
+  transform-origin: center center;
+}
+
+.product.zoom_in {
+  transform: scale(1.03);
+}
+
+.product.zoom_out {
+  transform: scale(1.14);
+}
+
+.product.pan_left {
+  transform: scale(1.14) translateX(42px);
+}
+
+.product.pan_right {
+  transform: scale(1.14) translateX(-42px);
 }
 
 .shine {
@@ -112,14 +135,14 @@ html, body {
   inset: 0;
   background:
     linear-gradient(115deg, transparent 0%%, transparent 38%%, rgba(255,255,255,0.18) 48%%, transparent 60%%);
-  opacity: 0.55;
+  opacity: 0.6;
 }
 
 .top-row {
   position: absolute;
-  top: 72px;
-  left: 72px;
-  right: 72px;
+  top: 70px;
+  left: 70px;
+  right: 70px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -151,19 +174,19 @@ html, body {
 
 .title-wrap {
   position: absolute;
-  top: 1235px;
+  top: 1250px;
   left: 62px;
   right: 62px;
   padding: 28px 36px;
   border-radius: 42px;
-  background: linear-gradient(180deg, rgba(15,23,42,0.72), rgba(2,6,23,0.58));
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 24px 70px rgba(0,0,0,0.42);
+  background: linear-gradient(180deg, rgba(15,23,42,0.74), rgba(2,6,23,0.62));
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 24px 70px rgba(0,0,0,0.45);
 }
 
 .title {
   color: white;
-  font-size: 68px;
+  font-size: 64px;
   font-weight: 950;
   line-height: 1.08;
   text-align: center;
@@ -175,23 +198,23 @@ html, body {
 
 .caption {
   position: absolute;
-  top: 1425px;
-  left: 70px;
-  right: 70px;
-  min-height: 190px;
-  padding: 26px 32px;
-  border-radius: 38px;
+  top: 1432px;
+  left: 68px;
+  right: 68px;
+  min-height: 206px;
+  padding: 30px 34px;
+  border-radius: 40px;
   color: white;
-  font-size: 56px;
-  font-weight: 900;
-  line-height: 1.16;
+  font-size: 58px;
+  font-weight: 950;
+  line-height: 1.14;
   text-align: center;
-  background: rgba(0,0,0,0.42);
-  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(0,0,0,0.48);
+  border: 1px solid rgba(255,255,255,0.18);
   text-shadow:
     0 5px 0 #000,
-    0 10px 28px rgba(0,0,0,0.9);
-  box-shadow: 0 20px 70px rgba(0,0,0,0.38);
+    0 10px 28px rgba(0,0,0,0.95);
+  box-shadow: 0 22px 74px rgba(0,0,0,0.42);
 }
 
 .caption strong {
@@ -276,12 +299,12 @@ html, body {
   <div class="corner right"></div>
 
   <div class="card">
-    <img class="product" src="%s"/>
+    <img class="product %s" src="%s"/>
     <div class="shine"></div>
   </div>
 
   <div class="top-row">
-    <div class="badge">🔥 HOT</div>
+    <div class="badge">HOT</div>
     <div class="tag">TikTok Pick</div>
   </div>
 
@@ -291,7 +314,7 @@ html, body {
 
   <div class="caption">%s</div>
 
-  <div class="cta"><span class="arrow">👇</span> Xem ở giỏ hàng</div>
+  <div class="cta"><span class="arrow">↓</span> Xem ở giỏ hàng</div>
 
   <div class="progress">
     <div class="progress-inner"></div>
@@ -301,6 +324,7 @@ html, body {
 </html>
 """.formatted(
                 imageUrl,
+                safeEffect,
                 imageUrl,
                 safeProductName,
                 highlightCaption(safeCaption)
@@ -313,6 +337,17 @@ html, body {
         );
 
         return htmlPath;
+    }
+
+    private String safeEffect(String effect) {
+        if (effect == null || effect.isBlank()) {
+            return "zoom_in";
+        }
+
+        return switch (effect) {
+            case "zoom_in", "zoom_out", "pan_left", "pan_right" -> effect;
+            default -> "zoom_in";
+        };
     }
 
     private String highlightCaption(String caption) {

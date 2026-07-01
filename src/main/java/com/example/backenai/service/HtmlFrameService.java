@@ -33,37 +33,29 @@ public class HtmlFrameService {
             throw new RuntimeException("Invalid audio duration: " + audioDuration);
         }
 
-        List<String> frames =
-                new ArrayList<>();
+        List<String> frames = new ArrayList<>();
 
-        double imageDuration =
-                audioDuration / imagePaths.size();
+        int frameCount = timeline.size();
 
-        for (int i = 0; i < imagePaths.size(); i++) {
+        for (int i = 0; i < frameCount; i++) {
+            CaptionSegment caption = timeline.get(i);
 
-            double currentTime =
-                    i * imageDuration;
+            int imageIndex = i % imagePaths.size();
 
-            String imagePath =
-                    imagePaths.get(i);
+            String imagePath = imagePaths.get(imageIndex);
 
-            CaptionSegment caption =
-                    findCaption(
-                            timeline,
-                            currentTime
-                    );
+            String effect = pickEffect(i);
 
             String htmlPath =
                     htmlTemplateService.createHtml(
                             imagePath,
                             productName,
-                            caption.getText()
+                            caption.getText(),
+                            effect
                     );
 
             String framePath =
-                    chromeScreenshotService.screenshot(
-                            htmlPath
-                    );
+                    chromeScreenshotService.screenshot(htmlPath);
 
             frames.add(framePath);
         }
@@ -73,17 +65,12 @@ public class HtmlFrameService {
         return frames;
     }
 
-    private CaptionSegment findCaption(
-            List<CaptionSegment> timeline,
-            double currentTime
-    ) {
-        for (CaptionSegment segment : timeline) {
-            if (currentTime >= segment.getStart()
-                    && currentTime < segment.getEnd()) {
-                return segment;
-            }
-        }
-
-        return timeline.get(timeline.size() - 1);
+    private String pickEffect(int index) {
+        return switch (index % 4) {
+            case 0 -> "zoom_in";
+            case 1 -> "pan_left";
+            case 2 -> "zoom_out";
+            default -> "pan_right";
+        };
     }
 }

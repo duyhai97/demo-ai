@@ -7,6 +7,7 @@ import com.example.backenai.service.JobService;
 import com.example.backenai.worker.step.*;
 import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Component

@@ -1,6 +1,7 @@
 package com.example.backenai.model;
 
 import com.example.backenai.constant.JobStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,11 +26,30 @@ public class VideoJob {
     private String affiliateLink;
 
     private JobStatus status;
+
     private List<String> imagePaths;
+
     private int progress;
+
     private String currentStep;
+
     private String error;
+
     private List<String> framePaths;
+
     private String createdBy;
+
     private String createdAt;
+
+    /**
+     * Lưu xuống DB
+     */
+    private String videoPlanJson;
+
+    /**
+     * Chỉ dùng trong pipeline, không serialize
+     */
+    @JsonIgnore
+    private VideoPlan videoPlan;
+
 }

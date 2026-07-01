@@ -6,6 +6,7 @@ import com.example.backenai.entity.UploadedImageEntity;
 import com.example.backenai.entity.UserEntity;
 import com.example.backenai.entity.VideoJobEntity;
 import com.example.backenai.model.VideoJob;
+import com.example.backenai.model.VideoPlan;
 import com.example.backenai.model.VideoQuotaResponse;
 import com.example.backenai.repository.*;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -35,7 +36,6 @@ public class JobService {
     private final ObjectMapper objectMapper;
     private final UserRepository userRepository;
     private final PurchaseOrderRepository purchaseOrderRepository;
-
 
     @Transactional
     public VideoJob createJob(
@@ -86,6 +86,7 @@ public class JobService {
         entity.setError(job.getError());
         entity.setFramePaths(toJson(job.getFramePaths()));
         entity.setCreatedBy(job.getCreatedBy());
+        entity.setVideoPlanJson(resolveVideoPlanJson(job));
 
         videoJobRepository.save(entity);
 
@@ -153,7 +154,40 @@ public class JobService {
         job.setError(entity.getError());
         job.setCreatedBy(entity.getCreatedBy());
         job.setCreatedAt(entity.getCreatedAt() == null ? null : entity.getCreatedAt().toString());
+        job.setVideoPlanJson(entity.getVideoPlanJson());
+        job.setVideoPlan(parseVideoPlan(entity.getVideoPlanJson()));
+
         return job;
+    }
+
+    private String resolveVideoPlanJson(VideoJob job) {
+        try {
+            if (job.getVideoPlanJson() != null && !job.getVideoPlanJson().isBlank()) {
+                return job.getVideoPlanJson();
+            }
+
+            if (job.getVideoPlan() != null) {
+                String json = objectMapper.writeValueAsString(job.getVideoPlan());
+                job.setVideoPlanJson(json);
+                return json;
+            }
+
+            return null;
+        } catch (Exception e) {
+            throw new RuntimeException("Convert videoPlan to JSON failed", e);
+        }
+    }
+
+    private VideoPlan parseVideoPlan(String json) {
+        try {
+            if (json == null || json.isBlank()) {
+                return null;
+            }
+
+            return objectMapper.readValue(json, VideoPlan.class);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String toJson(List<String> list) {
@@ -266,5 +300,4 @@ public class JobService {
                 remainingToday
         );
     }
-
 }

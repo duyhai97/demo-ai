@@ -32,6 +32,13 @@ public class VideoJobEntity {
     @Column(name = "script", columnDefinition = "LONGTEXT")
     private String script;
 
+    /**
+     * NEW
+     * Lưu toàn bộ VideoPlan JSON
+     */
+    @Column(name = "video_plan_json", columnDefinition = "LONGTEXT")
+    private String videoPlanJson;
+
     @Column(name = "voice_path", columnDefinition = "TEXT")
     private String voicePath;
 
